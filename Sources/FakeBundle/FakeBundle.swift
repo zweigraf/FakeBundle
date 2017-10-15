@@ -1,6 +1,89 @@
 import Foundation
 
+// MARK: - Code Generation
+
+func makeDirectoryCode(name: String, filename: String, childrenCreation: String, childrenClasses: String) -> String {
+    return """
+    class \(name): Directory {
+        var filename: String = "\(filename)"
+        lazy var children: [FileType] = {
+            return [\(childrenCreation)]
+        }()
+    
+        \(childrenClasses)
+    }
+    
+    """
+}
+
+func makeFileCode(name: String, filename: String, contentsBase64: String) -> String {
+    return """
+    class \(name): File {
+        var filename: String = "\(filename)"
+        lazy var contentsBase64: String = {
+            return "\(contentsBase64)"
+        }()
+    }
+    
+    """
+}
+
+// MARK: - File traversal logic
+
+func makeTypeName(filename: String) -> String {
+    return filename.replacingOccurrences(of: ".", with: "_").replacingOccurrences(of: " ", with: "__").replacingOccurrences(of: "-", with: "___").capitalized
+}
+
+func generateCode(inputUrl: URL, outputUrl: URL) throws {
+    let fm = FileManager.default
+    
+    func directoryAsCode(of url: URL) throws -> String {
+        let children = try fm.contentsOfDirectory(at: url, includingPropertiesForKeys: [], options: [.skipsSubdirectoryDescendants, .skipsHiddenFiles])
+        
+        var childrenTypes = [String]()
+        let childrenClassesString = try children.map { url -> String in
+            var isDirectory: ObjCBool = false
+            guard fm.fileExists(atPath: url.path, isDirectory: &isDirectory) else {
+                return ""
+            }
+            
+            let filename = url.lastPathComponent
+            let type = makeTypeName(filename: filename)
+            
+            guard !isDirectory.boolValue else {
+                let code = try directoryAsCode(of: url)
+                if !code.isEmpty {
+                    // Only add to children if we could actually generate the type for the dir
+                    childrenTypes.append("\(type)()")
+                }
+                return code
+            }
+            
+            // Single file
+            guard let data = fm.contents(atPath: url.path) else {
+                return ""
+            }
+            
+            let code = makeFileCode(name: type, filename: filename, contentsBase64: data.base64EncodedString())
+            if !code.isEmpty {
+                // Only add to children if we could actually generate the type for the file
+                childrenTypes.append("\(type)()")
+            }
+            return code
+        }.joined(separator: "\n\n")
+        
+        let filename = url.lastPathComponent
+        let name = makeTypeName(filename: filename)
+        let childrenCreation = childrenTypes.joined(separator: ", ")
+        return makeDirectoryCode(name: name, filename: filename, childrenCreation: childrenCreation, childrenClasses: childrenClassesString)
+    }
+    
+    let fileContents = fileHeader + (try directoryAsCode(of: inputUrl))
+    try fileContents.data(using: .utf8)?.write(to: outputUrl)
+}
+
 // MARK: - Header
+
 let fileHeader = """
 //
 //  FakeBundle.swift
@@ -50,88 +133,3 @@ extension Directory {
 }
 
 """
-
-// MARK: - Code Generation
-
-func makeDirectory(name: String, filename: String, childrenCreation: String, childrenClasses: String) -> String {
-    return """
-    class \(name): Directory {
-        var filename: String = "\(filename)"
-        lazy var children: [FileType] = {
-            return [\(childrenCreation)]
-        }()
-    
-        \(childrenClasses)
-    }
-    
-    """
-}
-
-func makeFile(name: String, filename: String, contentsBase64: String) -> String {
-    return """
-    class \(name): File {
-        var filename: String = "\(filename)"
-        lazy var contentsBase64: String = {
-            return "\(contentsBase64)"
-        }()
-    }
-    
-    """
-}
-
-// MARK: - File traversal logic
-
-func makeTypeName(filename: String) -> String {
-    return filename.replacingOccurrences(of: ".", with: "_").replacingOccurrences(of: " ", with: "__").replacingOccurrences(of: "-", with: "___").capitalized
-}
-
-func generateCode(inputUrl: URL, outputUrl: URL) throws {
-    let fm = FileManager.default
-    
-    func directoryAsCode(of url: URL) throws -> String {
-        let children = try fm.contentsOfDirectory(at: url, includingPropertiesForKeys: [], options: [.skipsSubdirectoryDescendants, .skipsHiddenFiles])
-        
-        var childrenTypes = [String]()
-        let childrenClassesString = try children.map { url -> String in
-            var isDirectory: ObjCBool = false
-            guard fm.fileExists(atPath: url.path, isDirectory: &isDirectory) else {
-                return ""
-            }
-            
-            let filename = url.lastPathComponent
-            let type = makeTypeName(filename: filename)
-            
-            // Add Children Type so we correctly add it to the children lazy var
-            guard !isDirectory.boolValue else {
-                let code = try directoryAsCode(of: url)
-                if !code.isEmpty {
-                    // Only add to children if we could actually generate the type for the dir
-                    childrenTypes.append("\(type)()")
-                }
-                return code
-            }
-            
-            // Single file
-            guard let data = fm.contents(atPath: url.path) else {
-                return ""
-            }
-            
-            let code = makeFile(name: type, filename: filename, contentsBase64: data.base64EncodedString())
-            if !code.isEmpty {
-                // Only add to children if we could actually generate the type for the file
-                childrenTypes.append("\(type)()")
-            }
-            return code
-            }.joined(separator: "\n\n")
-        
-        let filename = url.lastPathComponent
-        let name = makeTypeName(filename: filename)
-        let childrenCreation = childrenTypes.joined(separator: ", ")
-        return makeDirectory(name: name, filename: filename, childrenCreation: childrenCreation, childrenClasses: childrenClassesString)
-    }
-    
-    
-    
-    let fileContents = fileHeader + (try directoryAsCode(of: inputUrl))
-    try fileContents.data(using: .utf8)?.write(to: outputUrl)
-}
