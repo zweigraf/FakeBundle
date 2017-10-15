@@ -30,12 +30,12 @@ Currently you cannot easily access files directly.
 
 ## More complicated use cases
 
-    Resources().children.forEach { file in
-        if file.isDirectory {
+    Resources().children.forEach {
+        if $0.isDirectory {
             // Special directory handling
-        } else {
+        } else if let file = $0 as? File {
             if file.filename == "MyImage.png", 
-                let data = ($0 as? File)?.contents,
+                let data = file.contents,
                 let image = UIImage(data: data) {
                     // You now have an image
             }
