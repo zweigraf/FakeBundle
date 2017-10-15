@@ -11,7 +11,7 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "FakeBundle",
+            name: "fakebundle",
             dependencies: ["Commander", "PathKit"]),
     ]
 )
