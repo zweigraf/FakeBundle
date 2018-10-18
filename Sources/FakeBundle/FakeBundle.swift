@@ -31,7 +31,7 @@ func makeFileCode(name: String, filename: String, contentsBase64: String) -> Str
 // MARK: - File traversal logic
 
 func makeTypeName(filename: String) -> String {
-    return filename.replacingOccurrences(of: ".", with: "_").replacingOccurrences(of: " ", with: "__").replacingOccurrences(of: "-", with: "___").capitalized
+    return filename.replacingOccurrences(of: ".", with: "_").replacingOccurrences(of: " ", with: "__").replacingOccurrences(of: "-", with: "___").replacingOccurrences(of: "@", with: "____").capitalized
 }
 
 func generateCode(inputUrl: URL, outputUrl: URL) throws {
