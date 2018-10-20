@@ -10,7 +10,7 @@ As Swift Package Manager does not support Resources or `Bundle` for Swift execut
 
 ## Usage with [Mint](https://github.com/yonaskolb/mint) 🌱
 
-    $ mint run zweigraf/FakeBundle "fakebundle --input ./Resources --output ./Resources.swift"
+    $ mint run zweigraf/FakeBundle fakebundle --input ./Resources --output ./Resources.swift
 
 ## Use Case
 
