@@ -1,4 +1,4 @@
-// swift-tools-version:4.0
+// swift-tools-version:5.0
 
 import PackageDescription
 
@@ -8,9 +8,8 @@ let package = Package(
         .executable(name: "fakebundle", targets: ["fakebundle"])
     ],
     dependencies: [
-        .package(url: "https://github.com/kylef/Commander.git", .revision("e0cbee1bd73778c1076c675eaf660e97d09f3b32")),
-        // PathKit fork supporting SPM4
-        .package(url: "https://github.com/PoissonBallon/PathKit.git", .branch("master")),
+        .package(url: "https://github.com/kylef/Commander.git", from: "0.8.0"),
+        .package(url: "https://github.com/kylef/PathKit.git", from: "1.0.0"),
     ],
     targets: [
         .target(
